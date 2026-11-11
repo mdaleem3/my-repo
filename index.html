@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#173b2c">
+<title>Paan Menu | Mohammed Baseer</title>
+<style>
+:root{--green:#173b2c;--leaf:#2f7d4b;--cream:#fffaf0;--gold:#e5b84b;--ink:#1d2b22;--muted:#68756c}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.wrap{max-width:720px;margin:auto;padding:18px 15px 34px}
+.hero{background:linear-gradient(135deg,#173b2c,#286442);color:white;border-radius:24px;padding:26px 20px;text-align:center;box-shadow:0 12px 30px #173b2c22}
+.logo{font-size:36px;margin-bottom:4px}.hero h1{margin:0;font-size:30px;letter-spacing:.5px}.hero p{margin:8px 0 0;color:#e8f1e9}
+.pill{display:inline-block;margin-top:14px;background:#f3d77f;color:#3c3215;padding:7px 13px;border-radius:999px;font-weight:800;font-size:13px}
+h2{font-size:20px;margin:24px 3px 12px}
+.menu{display:grid;gap:10px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:white;border:1px solid #eee6d6;border-radius:16px;padding:14px 14px;box-shadow:0 3px 12px #46391b08}
+.name{font-weight:750;font-size:16px}.price{font-weight:850;color:var(--leaf);font-size:18px;white-space:nowrap}
+.controls{display:flex;align-items:center;gap:9px}.qty{min-width:18px;text-align:center;font-weight:800}
+button{border:0;cursor:pointer;font:inherit}.step{width:34px;height:34px;border-radius:50%;background:#eaf3ec;color:var(--green);font-size:20px;font-weight:800}
+.cart{margin-top:18px;background:white;border:1px solid #e9e1d2;border-radius:18px;padding:16px}
+.totalrow{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:18px}
+.pay{width:100%;margin-top:14px;background:#087d43;color:white;border-radius:13px;padding:15px;font-weight:850;font-size:17px}
+.pay:disabled{opacity:.45;cursor:not-allowed}.hint{font-size:12px;color:var(--muted);line-height:1.5;margin:10px 2px 0}
+.footer{text-align:center;color:var(--muted);font-size:13px;margin:22px 0 0}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="logo" aria-hidden="true">🍃</div>
+    <h1>PAAN MENU</h1>
+    <p>Mohammed Baseer</p>
+    <span class="pill">Paan varieties starting from ₹10</span>
+  </header>
+
+  <h2>Choose your paan</h2>
+  <section class="menu" id="menu"></section>
+
+  <section class="cart" aria-live="polite">
+    <div class="totalrow"><span>Your total</span><span id="total">₹0</span></div>
+    <button class="pay" id="pay" disabled>Pay with UPI</button>
+    <p class="hint">Tap + to add items, then select Pay with UPI. Your UPI app will open with the total amount filled in. Check the recipient name and amount before approving payment. Payment is complete only after your UPI app confirms it.</p>
+  </section>
+  <p class="footer">Thank you for visiting! 🙏</p>
+</main>
+<script>
+const upiId = "paytm.s3q7zwx@pty";
+const payeeName = "Mohammed Baseer";
+const products = [
+  {name:"Meetha Paan", price:35},
+  {name:"Flavour Paan", price:35},
+  {name:"Meenakshi Paan", price:35},
+  {name:"Saada Paan", price:10},
+  {name:"Zarda Paan", price:10},
+  {name:"Navratan Paan", price:45},
+  {name:"Souf Khopra Paan", price:10}
+];
+const quantities = products.map(() => 0);
+const menu = document.getElementById("menu");
+const totalEl = document.getElementById("total");
+const payBtn = document.getElementById("pay");
+function render(){
+  menu.innerHTML = "";
+  products.forEach((p,i)=>{
+    const row = document.createElement("article");
+    row.className = "item";
+    const left = document.createElement("div");
+    const name = document.createElement("div"); name.className="name"; name.textContent=p.name;
+    const price = document.createElement("div"); price.className="price"; price.textContent="₹"+p.price;
+    left.append(name,price);
+    const controls = document.createElement("div"); controls.className="controls";
+    const minus = document.createElement("button"); minus.className="step"; minus.type="button"; minus.textContent="−"; minus.setAttribute("aria-label","Remove one "+p.name);
+    const count = document.createElement("span"); count.className="qty"; count.textContent=quantities[i];
+    const plus = document.createElement("button"); plus.className="step"; plus.type="button"; plus.textContent="+"; plus.setAttribute("aria-label","Add one "+p.name);
+    minus.addEventListener("click",()=>{quantities[i]=Math.max(0,quantities[i]-1);render()});
+    plus.addEventListener("click",()=>{quantities[i]++;render()});
+    controls.append(minus,count,plus); row.append(left,controls); menu.append(row);
+  });
+  const total = products.reduce((sum,p,i)=>sum+p.price*quantities[i],0);
+  totalEl.textContent="₹"+total;
+  payBtn.disabled=total<=0;
+  payBtn.textContent=total>0 ? "Pay ₹"+total+" with UPI" : "Add paan to continue";
+}
+payBtn.addEventListener("click",()=>{
+  const total = products.reduce((sum,p,i)=>sum+p.price*quantities[i],0);
+  if(total<=0)return;
+  const summary = products.filter((p,i)=>quantities[i]>0).map((p)=>p.name+" x "+quantities[products.indexOf(p)]).join(", ");
+  const params = new URLSearchParams({pa:upiId,pn:payeeName,am:total.toFixed(2),cu:"INR",tn:"Paan order"});
+  window.location.href = "upi://pay?"+params.toString();
+});
+render();
+</script>
+</body>
+</html>
